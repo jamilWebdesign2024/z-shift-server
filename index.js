@@ -2,14 +2,13 @@
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 const app = express();
 
 // Middleware
 app.use(cors());
 app.use(express.json());
-
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.1gwegko.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -29,33 +28,13 @@ async function run() {
 
     const parcelCollection = client.db("zshift").collection("parcels");
 
-
     // Get all parcels
-    app.get('/parcels', async (req, res) => {
+    app.get("/parcels", async (req, res) => {
       const parcels = await parcelCollection.find().toArray();
       res.send(parcels);
     });
 
-
-    // parcels api
-    // app.get('/parcels', async (req, res) => {
-    //   const email = req.query.email;
-
-    //   // If email is given, filter by 'created_by', else get all
-    //   const query = email ? { created_by: email } : {};
-
-    //   // Sort by latest creation_date (descending)
-    //   const sort = { creation_date: -1 };
-
-    //   try {
-    //     const parcels = await parcelCollection.find(query).sort(sort).toArray();
-    //     res.send(parcels);
-    //   } catch (error) {
-    //     console.error('Error fetching parcels:', error);
-    //     res.status(500).send({ success: false, message: 'Failed to fetch parcels' });
-    //   }
-    // });
-    app.get('/parcels', async (req, res) => {
+    app.get("/parcels", async (req, res) => {
       const userEmail = req.query.email;
       const query = userEmail ? { created_by: userEmail } : {};
       const options = { sort: { creation_date: -1 } };
@@ -64,22 +43,32 @@ async function run() {
         const parcels = await parcelCollection.find(query, options).toArray();
         res.send(parcels);
       } catch (error) {
-        console.error('Error fetching parcels:', error);
-        res.status(500).send({ success: false, message: 'Failed to fetch parcels' });
+        console.error("Error fetching parcels:", error);
+        res
+          .status(500)
+          .send({ success: false, message: "Failed to fetch parcels" });
       }
     });
 
-
-
-
     // Sample route to insert parcel
-    app.post('/parcels', async (req, res) => {
+    app.post("/parcels", async (req, res) => {
       const newParcel = req.body;
       const result = await parcelCollection.insertOne(newParcel);
       res.send({ success: true, insertedId: result.insertedId });
     });
 
+    // DELETE a single parcel by ID
+    app.delete('/parcels/:id', async(req, res)=>{
+        try{
+          const id = req.params.id;
 
+          const result = await parcelCollection.deleteOne({_id: new ObjectId(id)});
+          res.send(result);
+        } catch (error){
+          console.error('Error deleting parcel:', error);
+          res.status(500).send({message: "Failed to delete parcel"});
+        }
+    });
 
 
     // Send a ping to confirm a successful connection
